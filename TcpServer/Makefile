@@ -7,7 +7,7 @@ LOGGER_DIR = ../AsyncLogging/
 SRC := $(wildcard *.cpp)
 SRC += $(wildcard $(LOGGER_DIR)*.cpp)
 OBJ := $(patsubst %.cpp,%.o,$(SRC))
-TARGET := test.out
+TARGET := dbserver
 
 #CC := arm-oe-linux-gnueabi-g++
 CC := g++

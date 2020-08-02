@@ -20,14 +20,12 @@ void highdb::add(std::string &key, std::string &&value) {
     record.set_type(1);
     site s;
     encoder_.write_record(std::move(record), s);
-    std::cout << "site " << s.file << " " << s.offset << std::endl;
     map_-> put(record.key(), std::move(s));
 }
 
 std::string highdb::get(std::string &key) {
     site site_;
     map_ -> for_one(key, site_);
-    std::cout << "site " << site_.file << " " << site_.offset << std::endl;
     pb::Record record = encoder_.get_record(std::move(site_));
     return record.value();
 }

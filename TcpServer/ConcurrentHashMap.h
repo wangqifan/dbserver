@@ -21,7 +21,6 @@ public:
     
     bool for_one(const K &key, V &p)
     {
-        std::cout << "key: " << key << " code : " <<  hashcode(key) << std::endl;
        return table_[hashcode(key)].for_one(key, p);
     }
 
@@ -40,7 +39,6 @@ public:
 
     void put(const K &key, V &&value)
     {
-        std::cout << "key: " << key << " code : " << hashcode(key) << std::endl;
         table_[hashcode(key)].put(key, std::move(value));
     }
 

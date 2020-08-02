@@ -17,8 +17,7 @@ class reporter {
           etcd::Client etcd("http://192.168.134.128:2379");
           while(true){
                etcd.set("/node/127.0.0.1:8080","12").get();
-               std::cout << "report onec" << std::endl;
-               sleep(1000);
+               std::this_thread::sleep_for(std::chrono::seconds(10));
             }
       }
       void start() {

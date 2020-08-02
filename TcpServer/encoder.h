@@ -14,7 +14,7 @@ class encoder
 private:
     int current_file;
     std::string filepack = "data/";
-    const int long maxsize = 1024;
+    const int long maxsize = 1024 * 1024 * 10;
     std::ofstream outfile;
     std::mutex mutex_;
 public:

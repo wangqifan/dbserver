@@ -14,7 +14,6 @@ pb::Record decoder::getnext() {
     inFile.read(buffer, sizeof(char) * nextlen);
     pb::Record record;
     record.ParseFromArray(buffer, nextlen);
-    std::cout << record.key() << " " << record.value() << std::endl;
     return record;
 }
 

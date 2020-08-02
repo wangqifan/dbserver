@@ -10,7 +10,7 @@
 #include "TcpServer.hh"
 #include "reporter.h"
 
-const off_t kRollSize = 2048*1000;
+const off_t kRollSize = 4096*1000;
 
 AsyncLogging* g_asynclog = NULL;
 
@@ -49,26 +49,26 @@ void split(const std::string& s,
 
 void onConnection(const TcpConnectionPtr& conn)
 {
-  printf("onConnection\n");
+  //printf("onConnection\n");
   //conn->send("123456789");
 }
 
 void onMessage(const TcpConnectionPtr& conn, Buffer* interBuffer, ssize_t len)
 {
-  printf("onMessage : received %d Bytes from connection [%s]\n", interBuffer->readableBytes(), conn->name());
+  // printf("onMessage : received %d Bytes from connection [%s]\n", interBuffer->readableBytes(), conn->name());
   std::string request = interBuffer->retrieveAsString(len - 2);
+  // std::cout << "message :" <<  request << std::endl;
   interBuffer -> retrieve(2);
     std::vector<std::string> terms;
     split(request, terms);
-    std::cout << "size: " << terms.size() << std::endl;
     if(terms.size() <= 1) {
       conn->send("bad request\n");
       return;
     } 
-    std::cout << terms[0] << std::endl;
+     // std::cout << terms[0] << std::endl;
     if(terms[0] == "get") {
       std::string res = highdb_.get(terms[1]);
-      std::cout << "get " <<  terms[1] << res << std::endl;
+     // std::cout << "get " <<  terms[1] << res << std::endl;
       conn->send(res);
       return; 
     } else if(terms[0] == "put") {
@@ -76,27 +76,27 @@ void onMessage(const TcpConnectionPtr& conn, Buffer* interBuffer, ssize_t len)
        conn->send("put success \n");
        return;
     }
-  conn -> send("hello I am a server 8080\r\n");
+  // conn -> send("hello I am a server 8080\r\n");
 }
 
 
 void newConnetion(int sockfd, const InetAddress& peeraddr)
 {
   LOG_DEBUG << "newConnetion() : accepted a new connection from";
-  ::write(sockfd, "How are you?\n", 13);
+  // ::write(sockfd, "How are you?\n", 13);
 }
 
 int main()
 {
-  AsyncLogging log("/dev/stdout", kRollSize, 0.1);
+  AsyncLogging log("log.txt", kRollSize, 0.1);
   g_asynclog = &log;
   Logger::setOutput(asyncOutput);
   Logger::setFlush(AsyncFlush);
   g_asynclog->start();
 
 
-  reporter report;
-  report.start();
+  // reporter report;
+  // report.start();
 
   InetAddress listenAddr(8080);
   EventLoop loop;

@@ -53,7 +53,6 @@ void encoder::write_record(pb::Record &&record, site &site_) {
 
 pb::Record encoder::get_record(site &&site_) {
     std::string filepath = filepack + std::to_string(site_.file) + ".dat";
-    std::cout << filepath << " " << site_.file << site_.offset << std::endl;
     std::ifstream inFile(filepath, std::ios::in | std::ios::binary);
     inFile.seekg(site_.offset);
     int len;
