@@ -1,5 +1,5 @@
 #include <assert.h>
-
+#include <iostream>
 #include "Acceptor.hh"
 #include "TcpServer.hh"
 #include "EventLoop.hh"
@@ -17,9 +17,10 @@ TcpServer::TcpServer(EventLoop* loop, const InetAddress& listenAddr, const std::
   p_acceptor(new Acceptor(loop, listenAddr)),
   m_nextConnId(1)
 {
+  LOG_TRACE << "TcpServer::TcpServer";
   p_acceptor->setNewConnectionCallBack(
     std::bind(&TcpServer::newConnetion, this, std::placeholders::_1, std::placeholders::_2));
-
+   m_connectionsMap.find(12);
 }
 
 TcpServer::~TcpServer()
@@ -52,7 +53,8 @@ void TcpServer::newConnetion(int sockfd, const InetAddress& peerAddr)
   InetAddress localAddr(sockets::getLocalAddr(sockfd));
   TcpConnectionPtr conn(new TcpConnection(p_loop, 
                connName, sockfd, localAddr, peerAddr));
-  m_connectionsMap[connName] = conn;
+ 
+  m_connectionsMap[sockfd] = conn;
   conn->setConnectionCallBack(m_connectionCallBack);
   conn->setMessageCallBack(m_messageCallBack);
   conn->setCloseCallBack(std::bind(&TcpServer::removeConnection, this, std::placeholders::_1));
@@ -70,10 +72,20 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
   p_loop->assertInLoopThread();
   LOG_INFO << "TcpServer::removeConnectionInLoop [" << m_name
            << "] - connection " << conn->name();
-  size_t n = m_connectionsMap.erase(conn->name());
+  size_t n = m_connectionsMap.erase(conn -> getfd());
   (void)n;
   assert(n == 1);
   EventLoop* ioLoop = conn->getLoop();
-  ioLoop->queueInLoop(//´ËÊ±µÄConnÎª×îºóÒ»¸öshared_ptr.Àë¿ª×÷ÓÃÓÚºóÎö¹¹´ËTcpConnection.
+  ioLoop->queueInLoop(//ï¿½ï¿½Ê±ï¿½ï¿½ConnÎªï¿½ï¿½ï¿½Ò»ï¿½ï¿½shared_ptr.ï¿½ë¿ªï¿½ï¿½ï¿½ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½TcpConnection.
       std::bind(&TcpConnection::connectDestroyed, conn));
 }
+
+TcpConnectionPtr& TcpServer::getconn(int fd) {
+   std::cout << m_connectionsMap.size()<< std::endl;
+    std::cout << fd << std::endl;
+    TcpConnectionPtr ptr;
+     if(m_connectionsMap.find(fd) != m_connectionsMap.end()) {
+        ptr = m_connectionsMap[fd];
+     }
+     return ptr;
+  }

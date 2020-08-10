@@ -43,6 +43,9 @@ public:
   bool isConnected() const { return m_state == kConnected; }
   bool isDisConnected() const { return m_state == kDisConnected; }
   const char* stateToString() const;
+  int getfd() {
+    return p_channel -> fd();
+  }
 
 private:
   enum StateE { kDisConnected, kConnecting, kDisConnecting, kConnected, };

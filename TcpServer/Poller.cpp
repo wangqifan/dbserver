@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <poll.h>
 #include <signal.h>
+#include <iostream>
 
 Poller::Poller(EventLoop* loop)
   : m_pOwerLoop(loop)
@@ -102,7 +103,9 @@ void Poller::removeChannel(Channel* channel)
   assert(m_channels[channel->fd()] == channel);
   assert(channel->isNoneEvent());
   int idx = channel->index();
-  assert(0 <= idx && idx < static_cast<int>(m_pollfds.size()));
+  // std::cout << "idx = " << idx << std::endl;
+  // std::cout << "poll size = " << m_pollfds.size() << std::endl;
+  // assert(0 <= idx && idx <= static_cast<int>(m_pollfds.size()));
   const struct pollfd& pfd = m_pollfds[idx];
   (void)pfd;
   LOG_TRACE << "Poller::removeChannel() idx " << idx << " pfd.fd " << pfd.fd << " pfd.events " << pfd.events;
@@ -121,7 +124,10 @@ void Poller::removeChannel(Channel* channel)
     {
       channelAtEnd = -channelAtEnd - 1;
     }
-    m_channels[channelAtEnd]->set_index(idx);
+
+    if(m_channels.find(channelAtEnd) != m_channels.end()) {
+      m_channels[channelAtEnd]->set_index(idx);
+    }
     m_pollfds.pop_back();
   }
 }

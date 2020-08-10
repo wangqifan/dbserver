@@ -1,44 +1,45 @@
 #include<vector>
-#include "highdb.h"
+#include "highdb.hh"
 #include "json.hpp"
-#include "decoder.h"
+#include "decoder.hh"
 
 // for convenience
 using json = nlohmann::json;
 
-highdb::highdb(std::string filepack_):
+highdb::highdb(std::string filepack_, dbserver *server):
+   dbserver_(server),
    filepack(filepack_),
-   encoder_(filepack_),
+   encoder_(new encoder(filepack_, dbserver_, this)),
    map_(new ConcurrentHashMap<std::string, site>(1024)) {
 
 }
 
-void highdb::add(std::string &key, std::string &&value) {
+void highdb::add(const TcpConnectionPtr& conn, std::string &key, std::string &&value) {
     pb::Record record;
     record.set_key(key);
     record.set_value(std::move(value));
     record.set_type(1);
     site s;
-    encoder_.write_record(std::move(record), s);
-    map_-> put(record.key(), std::move(s));
+    encoder_ -> write_record(conn, std::move(record), s);
+  //  map_-> put(record.key(), std::move(s));
 }
 
 std::string highdb::get(std::string &key) {
     site site_;
     map_ -> for_one(key, site_);
-    pb::Record record = encoder_.get_record(std::move(site_));
+    pb::Record record = encoder_ -> get_record(std::move(site_));
     return record.value();
 }
 void highdb::close() {
     close_ = true;
-    encoder_.close();
+    encoder_ -> close();
 }
 // 合并
 void highdb::merge() {
-    highdb mergedb("data2/");
+   /* highdb mergedb("data2/", dbserver_);
     int len = map_ -> table_length();
     int current = encoder_.get_current();
-    encoder coder("hit/");
+    encoder coder("hit/", dbserver_);
     for(int i = 0; i< len; i++) {
         std::vector<std::string> keys = map_ -> getkeys(i);
         for(int j = 0; j < keys.size(); j++) {
@@ -68,4 +69,5 @@ void highdb::merge() {
     this -> filepack = mergedb.filepack;
     this -> map_ = mergedb.map_;
     this -> encoder_.reset(mergedb.encoder_.get_current(), filepack) ;
+    */
 }

@@ -21,6 +21,8 @@ public:
 
   void setConnectionCallBack(const NetCallBacks::ConnectionCallBack& cb) { m_connectionCallBack = cb; }
   void setMessageCallBack(const NetCallBacks::MessageCallBack& cb) { m_messageCallBack = cb; }
+  TcpConnectionPtr& getconn(int fd);
+
 
 private:
   TcpServer& operator=(const TcpServer&);
@@ -30,7 +32,7 @@ private:
   void removeConnection(const TcpConnectionPtr& conn);
   void removeConnectionInLoop(const TcpConnectionPtr& conn);
 
-  typedef std::map<std::string, TcpConnectionPtr> ConnectionMap;
+  typedef std::map<int, TcpConnectionPtr> ConnectionMap;
 
   EventLoop* p_loop;
   std::string m_name;
