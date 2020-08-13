@@ -24,7 +24,7 @@ private:
 public:
     highdb(std::string filepack_,dbserver* server);
     void add(const TcpConnectionPtr& conn, std::string &key, std::string &&value);
-    std::string get(std::string &key);
+    void get(const TcpConnectionPtr& conn, std::string &key);
     void merge();
     void close();
      std::shared_ptr<ConcurrentHashMap<std::string, site>> getmap() {

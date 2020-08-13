@@ -24,11 +24,15 @@ void highdb::add(const TcpConnectionPtr& conn, std::string &key, std::string &&v
   //  map_-> put(record.key(), std::move(s));
 }
 
-std::string highdb::get(std::string &key) {
+void highdb::get(const TcpConnectionPtr& conn, std::string &key) {
     site site_;
+    site_.file = -1;
     map_ -> for_one(key, site_);
-    pb::Record record = encoder_ -> get_record(std::move(site_));
-    return record.value();
+    if(site_.file == -1) {
+        conn -> send ("key not found\n");
+        return;
+    }
+    encoder_ -> get_record(conn, std::move(site_));
 }
 void highdb::close() {
     close_ = true;

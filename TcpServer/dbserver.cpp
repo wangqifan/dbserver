@@ -35,17 +35,12 @@ void dbserver::onMessage(const TcpConnectionPtr& conn, Buffer* interBuffer, ssiz
       conn->send("bad request\n");
       return;
     } 
-     // std::cout << terms[0] << std::endl;
+
     if(terms[0] == "get") {
-      std::string res = highdb_ -> get(terms[1]);
-      //LOG_DEBUG << "************************** " + res;
-      // std::cout << "get " <<  terms[1] << res << std::endl;
-      res += '\r\n';
-      conn->send(res);
+      highdb_ -> get(conn, terms[1]);
       return; 
     } else if(terms[0] == "put") {
        highdb_ -> add(conn, terms[1], std::move(terms[2]));
-   //    conn->send("put success \n");
        return;
     }
 }

@@ -9,12 +9,13 @@
 
 #include "Logger.hh"
 #include "highdb.hh"
+#include <iostream>
+#include <stdio.h>
 
 encoder::encoder(std::string filepack_,  dbserver *server, highdb *high):
    mutex_(),
    dbserver_(server),
    ring(),
-   key_map(),
    high_(high),
    m_thread(std::bind(&encoder::fixevent, this)),
    filepack(filepack_) {
@@ -36,6 +37,21 @@ encoder::encoder(std::string filepack_,  dbserver *server, highdb *high):
     m_thread.start();
 }
 
+
+int encoder::getfd(int file) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(fds.find(file) != fds.end()) {
+        return fds[file];
+    }
+    std::string filepath = filepack + std::to_string(file) + ".dat";
+    std::cout << "file: " << filepath << std::endl;
+    int fd = open(filepath.c_str(), O_RDONLY);
+    std::cout << "fd: " << fd << std::endl; 
+    fds[file] = fd;
+    return  fd;
+}
+
+
 void encoder::fixevent() {
     for(;;) {
         
@@ -43,14 +59,29 @@ void encoder::fixevent() {
         int ret = io_uring_wait_cqe(&ring, &cqe);
         LOG_TRACE <<  cqe -> user_data;
         int fd = cqe -> user_data;
-        if(key_map.find(fd) != key_map.end()) {
-            node n = key_map[fd];
-            high_ -> getmap() -> put(n.key, std::move(n.site_));
-            // key_map.erase(fd);
-        }
-        if(conns.find(fd) != conns.end()) {
-            conns[fd] -> send("put success\n");
-           // conns.erase(fd);
+        if(iodata_map.find(fd) != iodata_map.end()) {
+            std::shared_ptr<io_data>  data = iodata_map[fd];
+             if(data->type == 0) { //write
+                high_ -> getmap() ->put(data-> key, std::move(data->site));
+                data->conns ->send("put success\n");
+             } else {
+            
+               int len = data->iov.iov_len;
+               char buffer[len];
+               memcpy(buffer, data->iov.iov_base, len);
+               pb::Record record;
+               record.ParseFromArray(buffer, len);
+               data->conns->send(record.value());
+               data->conns -> send("\n");
+              // close(data -> fd);
+               if(cqe->res < 0) {
+                    fprintf(stderr, "cqe failed: %s\n",
+                        strerror(-cqe->res));
+                    fprintf(stderr, "fd %d\n",
+                            data->fd);
+               }
+             }
+
         }
         io_uring_cqe_seen(&ring, cqe);
     }
@@ -94,35 +125,46 @@ void encoder::write_record(const TcpConnectionPtr& conn, pb::Record &&record, si
      .iov_base = data,
      .iov_len = sizeof(len) + str.size(),
     };
+
+
+    std::shared_ptr<io_data> io_data_(new io_data());
+    io_data_ -> conns = conn;
+    io_data_ -> iov = iov;
+    io_data_ -> type = 0;
+
     struct io_uring_sqe *sqe;
     sqe = io_uring_get_sqe(&ring);
-    io_uring_prep_writev(sqe, current_fd, &iov, 1, offset);
+    io_uring_prep_writev(sqe, current_fd, &(io_data_ -> iov), 1, offset);
     sqe->user_data = conn->getfd();
     site_.file = current_file;
     site_.offset = offset;
-    node n;
-    n.key = record.key();
-    n.site_ = site_;
-    key_map[conn->getfd()] = n;
-    conns[conn->getfd()] = conn;
+    site_.size = str.size();
+    io_data_ -> site = site_;
+    io_data_ -> key = record.key();
+    iodata_map[conn->getfd()] = io_data_;
     
     offset += iov.iov_len;
     io_uring_submit(&ring);
 }
 
-pb::Record encoder::get_record(site &&site_) {
-    std::string filepath = filepack + std::to_string(site_.file) + ".dat";
-    std::ifstream inFile(filepath, std::ios::in | std::ios::binary);
-    inFile.seekg(site_.offset);
-    char tmp[sizeof(int)];
-    inFile.read(tmp, sizeof(int));
-    int len = 0;
-    memcpy((char*)&len, &tmp, sizeof(len));
-    char buffer[len];
-    inFile.read(buffer, sizeof(char) * len);
-    pb::Record record;
-    record.ParseFromArray(buffer, len);
-    return record;
+void encoder::get_record(const TcpConnectionPtr& conn, site &&site_) {
+
+    int len = site_.size;
+    struct io_uring_sqe *sqe;
+    sqe = io_uring_get_sqe(&ring);
+
+    std::shared_ptr<io_data> data(new io_data());
+    data -> iov.iov_base  = new  char[len];
+    data -> iov.iov_len = site_.size;
+    data -> type = 1;
+    int filed = getfd(site_.file);
+    io_uring_prep_readv(sqe, filed, &data->iov, 1, site_.offset + sizeof(int));
+    data->fd = filed;
+    data->conns = conn;
+    sqe -> user_data = conn->getfd();
+    iodata_map[conn->getfd()] = data;
+    io_uring_submit(&ring);
+
 }
 int encoder::get_current() {
     return current_file;

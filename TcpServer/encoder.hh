@@ -8,22 +8,31 @@
 #include <sys/stat.h>
 #include <atomic>
 #include <fstream>
-#include <map>
+#include <vector>
+#include <unordered_map>
 #include "dbserver.hh"
-
+#include <unistd.h>
+#include <iostream>
 #include "record.pb.h"
 #include "site.h"
 #include "Thread.hh"
 
 #define ENTRIES   128
 
-struct node {
-    std::string key;
-    site site_;
-};
 
 class highdb;
 class dbserver;
+
+class io_data {
+
+public:
+    int fd = -1;
+    int type;
+    std::string key;
+    struct iovec iov;
+    struct site site;
+    TcpConnectionPtr conns;
+};
 
 class encoder
 {
@@ -36,16 +45,17 @@ private:
     std::mutex mutex_;
     struct io_uring ring;
     Thread m_thread;
-    std::map<int, node>  key_map;
-    std::map<int, TcpConnectionPtr> conns;
+    std::unordered_map<int, std::shared_ptr<io_data>> iodata_map;
+    std::unordered_map<int, int> fds;
     dbserver *dbserver_;
     highdb *high_;
+    int getfd(int file);
 public:
     encoder(std::string filepack_, dbserver *server, highdb *high);
     int getFileCout();
     void reset(int current, std::string package);
     void write_record(const TcpConnectionPtr& conn, pb::Record &&record, site &site_);
-    pb::Record get_record(site &&site_);
+    void get_record(const TcpConnectionPtr& conn, site &&site_);
     int get_current();
     void close();
     void fixevent();
